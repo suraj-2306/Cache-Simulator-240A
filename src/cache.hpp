@@ -11,6 +11,8 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <vector>
 
 //
 // Student Information
@@ -40,27 +42,27 @@ extern uint32_t dcacheAssoc;     // Associativity of the D$
 extern uint32_t dcacheBlocksize; // Blocksize of the D$
 extern uint32_t dcacheHitTime;   // Hit Time of the D$
 
-extern uint32_t l2cacheSets;     // Number of sets in the L2$
-extern uint32_t l2cacheAssoc;    // Associativity of the L2$
-extern uint32_t l2cacheBlocksize;// Blocksize of the L2$
-extern uint32_t l2cacheHitTime;  // Hit Time of the L2$
-extern uint32_t inclusive;       // Indicates if the L2 is inclusive
+extern uint32_t l2cacheSets;      // Number of sets in the L2$
+extern uint32_t l2cacheAssoc;     // Associativity of the L2$
+extern uint32_t l2cacheBlocksize; // Blocksize of the L2$
+extern uint32_t l2cacheHitTime;   // Hit Time of the L2$
+extern uint32_t inclusive;        // Indicates if the L2 is inclusive
 extern uint32_t prefetch;
 
-extern uint32_t blocksize;       // Block/Line size
-extern uint32_t memspeed;        // Latency of Main Memory
+extern uint32_t blocksize; // Block/Line size
+extern uint32_t memspeed;  // Latency of Main Memory
 
 //------------------------------------//
 //          Cache Statistics          //
 //------------------------------------//
 
-extern uint64_t icacheRefs;       // I$ references
-extern uint64_t icacheMisses;     // I$ misses
-extern uint64_t icachePenalties;  // I$ penalties
+extern uint64_t icacheRefs;      // I$ references
+extern uint64_t icacheMisses;    // I$ misses
+extern uint64_t icachePenalties; // I$ penalties
 
-extern uint64_t dcacheRefs;       // D$ references
-extern uint64_t dcacheMisses;     // D$ misses
-extern uint64_t dcachePenalties;  // D$ penalties
+extern uint64_t dcacheRefs;      // D$ references
+extern uint64_t dcacheMisses;    // D$ misses
+extern uint64_t dcachePenalties; // D$ penalties
 
 extern uint64_t l2cacheRefs;      // L2$ references
 extern uint64_t l2cacheMisses;    // L2$ misses
@@ -102,4 +104,16 @@ void icache_prefetch(uint32_t addr);
 
 void dcache_prefetch(uint32_t addr);
 
+int log2(uint32_t number);
+
+struct cacheLine
+{
+  std::vector<bool> tag;
+  std::vector<bool> index;
+  std::vector<bool> offset;
+	int lastUsed;
+};
+
+cacheLine AddrToCacheLine(uint32_t addr,int tagSize,int indexSize,int blockSize);
+uint32_t BoolVect2Int(std::vector<bool> boolVect);
 #endif
