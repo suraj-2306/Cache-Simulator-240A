@@ -194,10 +194,9 @@ int read_mem_access(uint32_t *pc, uint32_t *addr, char *i_or_d, char *r_or_w) {
 
   sscanf(buf, "0x%x\t0x%x\t%c\t%c\n", pc, addr, i_or_d, r_or_w);
   return 1;
-  }
+}
 
 int main(int argc, char *argv[]) {
-  freopen("./trace.txt","r",stdin);
   // Set defaults
   set_defaults();
 
