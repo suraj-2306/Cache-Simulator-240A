@@ -111,7 +111,8 @@ struct cacheLine
   std::vector<bool> tag;
   std::vector<bool> index;
   std::vector<bool> offset;
-	int lastUsed;
+	int age;
+  bool valid;
 };
 
 cacheLine AddrToCacheLine(uint32_t addr,int tagSize,int indexSize,int blockSize);

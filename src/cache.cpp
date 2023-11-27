@@ -65,16 +65,16 @@ uint64_t other_miss; // Other misses (Conflict / Capacity miss) on all caches
 // uint8_t *icache;
 
 cacheLine icacheLine;
-vector<cacheLine> icacheSet(2);
-vector<vector<cacheLine>> icache(512);
+vector<cacheLine> icacheSet(icacheAssoc);
+vector<vector<cacheLine>> icache(icacheSets);
 
 cacheLine l2cacheLine;
-vector<cacheLine> l2cacheSet(8);
-vector<vector<cacheLine>> l2cache(16384);
+vector<cacheLine> l2cacheSet(l2cacheAssoc);
+vector<vector<cacheLine>> l2cache(l2cacheSets);
 
 cacheLine dcacheLine;
-vector<cacheLine> dcacheSet(8);
-vector<vector<cacheLine>> dcache(16384);
+vector<cacheLine> dcacheSet(dcacheAssoc);
+vector<vector<cacheLine>> dcache(dcacheSets);
 
 //
 // TODO: Add your Cache data structures here
@@ -99,7 +99,7 @@ vector<vector<cacheLine>> init_cacheMem(int cacheTags, int cacheSets,
   tempCacheLine.index = tempindex;
   tempCacheLine.offset = tempoffset;
   tempCacheLine.tag = temptag;
-  tempCacheLine.lastUsed = 0;
+  tempCacheLine.age = 0;
 
   for (i = 0; i < 1 << cacheSets; i++) {
     cache[i] = cacheSet;
@@ -107,7 +107,8 @@ vector<vector<cacheLine>> init_cacheMem(int cacheTags, int cacheSets,
       cache[i][j].index = tempindex;
       cache[i][j].offset = tempoffset;
       cache[i][j].tag = temptag;
-      cache[i][j].lastUsed = j;
+      cache[i][j].age = j;
+      cache[i][j].valid = 0;
     }
   }
   return cache;
@@ -151,9 +152,10 @@ void cacheUpdate(int updatestatus, vector<cacheLine> *cacheSet,
   int i = 0, mark = -1;
   if (updatestatus == -1) {
     for (i = 0; i < cacheAssoc; i++) {
-      if ((*cacheSet)[i].lastUsed == 0) {
+      if ((*cacheSet)[i].age == 0) {
         mark = i;
         (*cacheSet)[i].tag = incomCacheLine.tag;
+        (*cacheSet)[i].valid = 1;
         break;
       }
     }
@@ -162,19 +164,14 @@ void cacheUpdate(int updatestatus, vector<cacheLine> *cacheSet,
     // (*cacheSet)[updatestatus].tag = incomCacheLine.tag;
     mark = updatestatus;
   }
-  int prevAge = (*cacheSet)[i].lastUsed;
+  int prevAge = (*cacheSet)[mark].age;
   for (i = 0; i < cacheAssoc; i++) {
     if (mark == i)
-      (*cacheSet)[i].lastUsed = cacheAssoc - 1;
-    else if (prevAge < (*cacheSet)[i].lastUsed)
-      (*cacheSet)[i].lastUsed--;
+      (*cacheSet)[i].age = cacheAssoc - 1;
+    else if (prevAge < (*cacheSet)[i].age)
+      (*cacheSet)[i].age--;
     else
       continue;
-    // if ((*cacheSet)[i].lastUsed == 0)
-    //   continue;
-    // else {
-    //   (*cacheSet)[i].lastUsed--;
-    // }
   }
 }
 
@@ -182,100 +179,93 @@ void cacheUpdate(int updatestatus, vector<cacheLine> *cacheSet,
 // 'addr' Return the access time for the memory operation
 //
 uint32_t icache_access(uint32_t addr) {
-  uint32_t latency = 0;
+
+  uint32_t penalty = 0;
   int i, hitFlag = 0;
   icacheRefs++;
+  if (addr == 992)
+    printf("ninja");
 
-  cacheLine tempCacheLine,
-      incomCacheLine =
-          AddrToCacheLine(addr, 32 - log2(icacheSets) - log2(icacheBlocksize),
-                          log2(icacheSets), log2(icacheBlocksize));
+  cacheLine incomCacheLine =
+      AddrToCacheLine(addr, 32 - log2(icacheSets) - log2(icacheBlocksize),
+                      log2(icacheSets), log2(icacheBlocksize));
+  int indexInt = BoolVect2Int(incomCacheLine.index);
   for (i = 0; i < icacheAssoc; i++) {
-    if (icache[BoolVect2Int(incomCacheLine.index)][i].tag ==
-        incomCacheLine.tag) {
-      latency += l2cacheHitTime;
+    if (icache[indexInt][i].tag == incomCacheLine.tag &&
+        icache[indexInt][i].valid == 1) {
       hitFlag = 1;
-      cacheUpdate(i, &icache[BoolVect2Int(incomCacheLine.index)],
-                  incomCacheLine, icacheAssoc);
+      cacheUpdate(i, &icache[indexInt], incomCacheLine, icacheAssoc);
       break;
     }
   }
   if (hitFlag == 0) {
-    // latency += l2cache_access(addr);
-    latency += icacheHitTime;
+    penalty += l2cache_access(addr);
     icacheMisses++;
-    cacheUpdate(-1, &icache[BoolVect2Int(incomCacheLine.index)], incomCacheLine,
-                icacheAssoc);
+    icachePenalties += penalty;
+    cacheUpdate(-1, &icache[indexInt], incomCacheLine, icacheAssoc);
   }
-
-  return latency;
+  return penalty + icacheHitTime;
 }
 
 // Perform a memory access through the dcache interface for the address
 // 'addr' Return the access time for the memory operation
 //
 uint32_t dcache_access(uint32_t addr) {
-  uint32_t latency = 0;
+  uint32_t penalty = 0;
   int i, hitFlag = 0;
   dcacheRefs++;
 
   cacheLine incomCacheLine =
       AddrToCacheLine(addr, 32 - log2(dcacheSets) - log2(dcacheBlocksize),
                       log2(dcacheSets), log2(dcacheBlocksize));
+  int indexInt = BoolVect2Int(incomCacheLine.index);
   for (i = 0; i < dcacheAssoc; i++) {
-    if (dcache[BoolVect2Int(incomCacheLine.index)][i].tag ==
-        incomCacheLine.tag) {
-      latency += dcacheHitTime;
+    if (dcache[indexInt][i].tag == incomCacheLine.tag&&
+        dcache[indexInt][i].valid == 1) {
       hitFlag = 1;
-      cacheUpdate(i, &dcache[BoolVect2Int(incomCacheLine.index)],
-                  incomCacheLine, dcacheAssoc);
+      cacheUpdate(i, &dcache[indexInt], incomCacheLine, dcacheAssoc);
       break;
     }
   }
   if (hitFlag == 0) {
-    // latency+= l2cache_access(addr);
+    penalty += l2cache_access(addr);
     dcacheMisses++;
-    latency += dcacheHitTime;
-    cacheUpdate(-1, &dcache[BoolVect2Int(incomCacheLine.index)], incomCacheLine,
-                dcacheAssoc);
+    dcachePenalties += penalty;
+    cacheUpdate(-1, &dcache[indexInt], incomCacheLine, dcacheAssoc);
   }
-
-  return latency;
+  return penalty + dcacheHitTime;
 }
 
 // Perform a memory access to the l2cache for the address 'addr'
 // Return the access time for the memory operation
 //
 uint32_t l2cache_access(uint32_t addr) {
-
-  uint32_t latency = 0;
+  if (addr ==408)
+    printf("ninja");
+  uint32_t penalty = 0;
   int i, hitFlag = 0;
   l2cacheRefs++;
 
-  cacheLine tempCacheLine,
-      incomCacheLine =
-          AddrToCacheLine(addr, 32 - log2(l2cacheSets) - log2(l2cacheBlocksize),
-                          log2(l2cacheSets), log2(l2cacheBlocksize));
-  // l2cacheAssoc=8;
+  cacheLine incomCacheLine =
+      AddrToCacheLine(addr, 32 - log2(l2cacheSets) - log2(l2cacheBlocksize),
+                      log2(l2cacheSets), log2(l2cacheBlocksize));
+  int indexInt = BoolVect2Int(incomCacheLine.index);
   for (i = 0; i < l2cacheAssoc; i++) {
-    if (l2cache[BoolVect2Int(incomCacheLine.index)][i].tag ==
-        incomCacheLine.tag) {
-      latency += l2cacheHitTime;
+    if (l2cache[indexInt][i].tag == incomCacheLine.tag&&
+        l2cache[indexInt][i].valid == 1) {
       hitFlag = 1;
-      cacheUpdate(i, &l2cache[BoolVect2Int(incomCacheLine.index)],
-                  incomCacheLine, l2cacheAssoc);
+      cacheUpdate(i, &l2cache[indexInt], incomCacheLine, l2cacheAssoc);
       break;
     }
   }
 
   if (hitFlag == 0) {
-    latency += memspeed;
-    latency += l2cacheHitTime;
+    penalty += memspeed;    printf("%d\n",addr);
     l2cacheMisses++;
-    cacheUpdate(-1, &l2cache[BoolVect2Int(incomCacheLine.index)],
-                incomCacheLine, l2cacheAssoc);
+    l2cachePenalties += penalty;
+    cacheUpdate(-1, &l2cache[indexInt], incomCacheLine, l2cacheAssoc);
   }
-  return latency;
+  return penalty + l2cacheHitTime;
 }
 
 // Predict an address to prefetch on icache with the information of last
@@ -345,7 +335,7 @@ cacheLine AddrToCacheLine(uint32_t addr, int tagSize, int indexSize,
     } else {
       tempCacheLine.tag[i - blockSize - indexSize] = bit;
     }
-    tempCacheLine.lastUsed = 0;
+    tempCacheLine.age = 0;
   }
   return tempCacheLine;
 }
