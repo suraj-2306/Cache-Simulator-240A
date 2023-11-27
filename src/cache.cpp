@@ -92,9 +92,9 @@ vector<vector<cacheLine>> init_cacheMem(int cacheTags, int cacheSets,
   vector<vector<cacheLine>> cache(1 << cacheSets);
   vector<cacheLine> cacheSet(cacheAssoc);
 
-  vector<bool> temptag(cacheTags, 0);
-  vector<bool> tempindex(cacheSets, 0);
-  vector<bool> tempoffset(cacheBlocks, 0);
+  vector<uint8_t> temptag(cacheTags, 0);
+  vector<uint8_t> tempindex(cacheSets, 0);
+  vector<uint8_t> tempoffset(cacheBlocks, 0);
   cacheLine tempCacheLine;
   tempCacheLine.index = tempindex;
   tempCacheLine.offset = tempoffset;
@@ -183,8 +183,6 @@ uint32_t icache_access(uint32_t addr) {
   uint32_t penalty = 0;
   int i, hitFlag = 0;
   icacheRefs++;
-  if (addr == 992)
-    printf("ninja");
 
   cacheLine incomCacheLine =
       AddrToCacheLine(addr, 32 - log2(icacheSets) - log2(icacheBlocksize),
@@ -220,7 +218,7 @@ uint32_t dcache_access(uint32_t addr) {
                       log2(dcacheSets), log2(dcacheBlocksize));
   int indexInt = BoolVect2Int(incomCacheLine.index);
   for (i = 0; i < dcacheAssoc; i++) {
-    if (dcache[indexInt][i].tag == incomCacheLine.tag&&
+    if (dcache[indexInt][i].tag == incomCacheLine.tag &&
         dcache[indexInt][i].valid == 1) {
       hitFlag = 1;
       cacheUpdate(i, &dcache[indexInt], incomCacheLine, dcacheAssoc);
@@ -240,8 +238,6 @@ uint32_t dcache_access(uint32_t addr) {
 // Return the access time for the memory operation
 //
 uint32_t l2cache_access(uint32_t addr) {
-  if (addr ==408)
-    printf("ninja");
   uint32_t penalty = 0;
   int i, hitFlag = 0;
   l2cacheRefs++;
@@ -251,7 +247,7 @@ uint32_t l2cache_access(uint32_t addr) {
                       log2(l2cacheSets), log2(l2cacheBlocksize));
   int indexInt = BoolVect2Int(incomCacheLine.index);
   for (i = 0; i < l2cacheAssoc; i++) {
-    if (l2cache[indexInt][i].tag == incomCacheLine.tag&&
+    if (l2cache[indexInt][i].tag == incomCacheLine.tag &&
         l2cache[indexInt][i].valid == 1) {
       hitFlag = 1;
       cacheUpdate(i, &l2cache[indexInt], incomCacheLine, l2cacheAssoc);
@@ -260,7 +256,7 @@ uint32_t l2cache_access(uint32_t addr) {
   }
 
   if (hitFlag == 0) {
-    penalty += memspeed;    printf("%d\n",addr);
+    penalty += memspeed;
     l2cacheMisses++;
     l2cachePenalties += penalty;
     cacheUpdate(-1, &l2cache[indexInt], incomCacheLine, l2cacheAssoc);
@@ -292,13 +288,28 @@ uint32_t dcache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
 
 // Perform a prefetch operation to I$ for the address 'addr'
 void icache_prefetch(uint32_t addr) {
-  //
-  // TODO: Implement I$ prefetch operation
-  //
+
+  cacheLine incomCacheLine =
+      AddrToCacheLine(addr, 32 - log2(icacheSets) - log2(icacheBlocksize),
+                      log2(icacheSets), log2(icacheBlocksize));
+  int indexInt = BoolVect2Int(incomCacheLine.index);
+
+  cacheUpdate(-1, &icache[indexInt], incomCacheLine, icacheAssoc);
+
+  // //
+  // // TODO: Implement I$ prefetch operation
+  // //
 }
 
 // Perform a prefetch operation to D$ for the address 'addr'
 void dcache_prefetch(uint32_t addr) {
+
+  cacheLine incomCacheLine =
+      AddrToCacheLine(addr, 32 - log2(dcacheSets) - log2(dcacheBlocksize),
+                      log2(dcacheSets), log2(dcacheBlocksize));
+  int indexInt = BoolVect2Int(incomCacheLine.index);
+
+  cacheUpdate(-1, &dcache[indexInt], incomCacheLine, dcacheAssoc);
   //
   // TODO: Implement D$ prefetch operation
   //
@@ -318,9 +329,9 @@ cacheLine AddrToCacheLine(uint32_t addr, int tagSize, int indexSize,
   bool bit;
   cacheLine tempCacheLine;
 
-  vector<bool> temptag(tagSize, 0);
-  vector<bool> tempindex(indexSize, 0);
-  vector<bool> tempoffset(blockSize, 0);
+  vector<uint8_t> temptag(tagSize, 0);
+  vector<uint8_t> tempindex(indexSize, 0);
+  vector<uint8_t> tempoffset(blockSize, 0);
 
   tempCacheLine.tag = temptag;
   tempCacheLine.index = tempindex;
@@ -340,7 +351,7 @@ cacheLine AddrToCacheLine(uint32_t addr, int tagSize, int indexSize,
   return tempCacheLine;
 }
 
-uint32_t BoolVect2Int(vector<bool> boolVect) {
+uint32_t BoolVect2Int(vector<uint8_t> boolVect) {
   uint32_t intSum = 0;
   for (int i = 0; i < boolVect.size(); i++) {
     if (boolVect[i])

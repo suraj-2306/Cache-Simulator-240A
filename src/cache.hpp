@@ -1,4 +1,3 @@
-//========================================================//
 //  cache.h                                               //
 //  Header file for the Cache Simulator                   //
 //                                                        //
@@ -10,8 +9,8 @@
 #define CACHE_HPP
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <vector>
 
 //
@@ -106,15 +105,15 @@ void dcache_prefetch(uint32_t addr);
 
 int log2(uint32_t number);
 
-struct cacheLine
-{
-  std::vector<bool> tag;
-  std::vector<bool> index;
-  std::vector<bool> offset;
-	int age;
+struct cacheLine {
+  std::vector<uint8_t> tag;
+  std::vector<uint8_t> index;
+  std::vector<uint8_t> offset;
+  int age;
   bool valid;
 };
 
-cacheLine AddrToCacheLine(uint32_t addr,int tagSize,int indexSize,int blockSize);
-uint32_t BoolVect2Int(std::vector<bool> boolVect);
+cacheLine AddrToCacheLine(uint32_t addr, int tagSize, int indexSize,
+                          int blockSize);
+uint32_t BoolVect2Int(std::vector<uint8_t> boolVect);
 #endif
