@@ -13,6 +13,28 @@
 #include <stdlib.h>
 #include <vector>
 
+struct cacheLine {
+  uint32_t tag;
+  uint32_t index;
+  uint32_t offset;
+  int age;
+  bool valid;
+};
+
+struct strideStruct {
+  uint32_t addrt_4;
+  uint32_t addrt_3;
+  uint32_t addrt_2;
+  uint32_t addrt_1;
+  int32_t difft_3;
+  int32_t difft_2;
+  int32_t difft_1;
+  int32_t difft;
+  int32_t stride;
+  uint64_t count;
+  bool strideFlag;
+};
+
 //
 // Student Information
 //
@@ -70,6 +92,14 @@ extern uint64_t l2cachePenalties; // L2$ penalties
 extern uint64_t compulsory_miss;
 extern uint64_t other_miss;
 
+extern uint64_t dcachePrefetch;
+extern uint64_t icachePrefetch;
+extern uint64_t l2cachePrefetch;
+
+extern strideStruct icacheStride;
+extern strideStruct dcacheStride;
+extern strideStruct l2cacheStride;
+
 //------------------------------------//
 //      Cache Function Prototypes     //
 //------------------------------------//
@@ -108,24 +138,6 @@ void dcache_prefetch(uint32_t addr);
 void l2cache_prefetch(uint32_t addr);
 
 int log2(uint32_t number);
-
-struct cacheLine {
-  uint32_t tag;
-  uint32_t index;
-  uint32_t offset;
-  int age;
-  bool valid;
-};
-
-struct strideStruct {
-  uint32_t pct_3;
-  uint32_t pct_2;
-  uint32_t pct_1;
-  uint32_t pct;
-  uint32_t difft_2;
-  uint32_t difft_1;
-  uint32_t difft;
-};
 
 cacheLine AddrToCacheLine(uint32_t addr, int tagSize, int indexSize,
                           int blockSize);

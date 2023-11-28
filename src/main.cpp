@@ -227,6 +227,7 @@ int main(int argc, char *argv[]) {
   uint32_t addr = 0;
   char i_or_d = '\0';
   char r_or_w = '\0';
+  double dcache_prefetch_count = 0;
 
   // Read each memory access from the trace
   while (read_mem_access(&pc, &addr, &i_or_d, &r_or_w)) {
@@ -241,7 +242,7 @@ int main(int argc, char *argv[]) {
       totalPenalties += dcache_access(addr);
       if (prefetch == TRUE)
         dcache_prefetch(dcache_prefetch_addr(pc, addr, r_or_w));
-      l2cache_prefetch(l2cache_prefetch_addr(pc, addr, r_or_w));
+     l2cache_prefetch(l2cache_prefetch_addr(pc, addr, r_or_w));
     } else {
       fprintf(stderr, "Input Error '%c' must be either 'I' or 'D'\n", i_or_d);
       exit(1);
@@ -254,6 +255,9 @@ int main(int argc, char *argv[]) {
   printCacheStats();
   printf("Total Memory accesses:  %lu\n", totalRefs);
   printf("Total Memory penalties: %lu\n", totalPenalties);
+  printf("Total Icache Prefetch Cases: %ld\n", icacheStride.count);
+  printf("Total Dcache Prefetch Cases: %ld\n", dcacheStride.count);
+  printf("Total L2cache Prefetch Cases: %ld\n", l2cacheStride.count);
   if (totalRefs > 0) {
     printf("avg Memory access time: %13.2f cycles\n",
            (double)totalPenalties / totalRefs);

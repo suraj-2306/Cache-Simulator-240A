@@ -110,34 +110,42 @@ vector<vector<cacheLine>> init_cacheMem(int cacheTags, int cacheSets,
 }
 strideStruct initStrideDetector() {
   strideStruct tempStrideStruct;
-  tempStrideStruct.pct = 0;
-  tempStrideStruct.pct_1 = 0;
-  tempStrideStruct.pct_2 = 0;
-  tempStrideStruct.pct_3 = 0;
+  tempStrideStruct.addrt_1 = 0;
+  tempStrideStruct.addrt_2 = 0;
+  tempStrideStruct.addrt_3 = 0;
+  tempStrideStruct.addrt_4 = 0;
   tempStrideStruct.difft = 0;
   tempStrideStruct.difft_1 = 0;
   tempStrideStruct.difft_2 = 0;
+  tempStrideStruct.difft_3 = 0;
+  tempStrideStruct.count = 0;
+  // tempStrideStruct.strideFlag = 0;
 
   return tempStrideStruct;
 }
-int strideCalculator(strideStruct *tempStrideStruct, uint32_t pc) {
-  (*tempStrideStruct).difft_2 =
-      (*tempStrideStruct).pct_2 - (*tempStrideStruct).pct_3;
-  (*tempStrideStruct).difft_1 =
-      (*tempStrideStruct).pct_1 - (*tempStrideStruct).pct_2;
-  (*tempStrideStruct).difft =
-      (*tempStrideStruct).pct - (*tempStrideStruct).pct_1;
+void strideCalculator(strideStruct *tempStrideStruct, uint32_t addr) {
+  tempStrideStruct->strideFlag = 0;
 
-  (*tempStrideStruct).pct_3 = (*tempStrideStruct).pct_2;
-  (*tempStrideStruct).pct_2 = (*tempStrideStruct).pct_1;
-  (*tempStrideStruct).pct_1 = (*tempStrideStruct).pct;
-  (*tempStrideStruct).pct = pc;
+  (*tempStrideStruct).difft_3 =
+      (*tempStrideStruct).addrt_3 - (*tempStrideStruct).addrt_4;
+  (*tempStrideStruct).difft_2 =
+      (*tempStrideStruct).addrt_2 - (*tempStrideStruct).addrt_3;
+  (*tempStrideStruct).difft_1 =
+      (*tempStrideStruct).addrt_1 - (*tempStrideStruct).addrt_2;
+  (*tempStrideStruct).difft = addr - (*tempStrideStruct).addrt_1;
+
+  (*tempStrideStruct).addrt_4 = (*tempStrideStruct).addrt_3;
+  (*tempStrideStruct).addrt_3 = (*tempStrideStruct).addrt_2;
+  (*tempStrideStruct).addrt_2 = (*tempStrideStruct).addrt_1;
+  (*tempStrideStruct).addrt_1 = addr;
 
   if (((*tempStrideStruct).difft_1 - (*tempStrideStruct).difft_2 == 0) &&
-      ((*tempStrideStruct).difft - (*tempStrideStruct).difft_1 == 0))
-    return (*tempStrideStruct).difft;
-  else
-    return 1;
+      ((*tempStrideStruct).difft - (*tempStrideStruct).difft_1 == 0)) {
+    tempStrideStruct->stride = (*tempStrideStruct).difft;
+    tempStrideStruct->strideFlag = 1;
+  }
+  // } else
+  //   tempStrideStruct->strideFlag = 0;
 }
 
 void init_cache() {
@@ -301,8 +309,13 @@ uint32_t l2cache_access(uint32_t addr) {
 // Read/Write of last icache access
 uint32_t icache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
 
-  return addr + icacheBlocksize * strideCalculator(&icacheStride,
-                                                   pc); // Next line prefetching
+  strideCalculator(&icacheStride, addr);
+  if (icacheStride.strideFlag) {
+    icacheStride.count++;
+    return addr + icacheStride.stride; // Next line prefetching
+  } else
+    return addr + icacheBlocksize;
+
   //
   // TODO: Implement a better prefetching strategy
   //
@@ -313,22 +326,29 @@ uint32_t icache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
 // dcache access 'addr':   Accessed Address of last dcache access 'r_or_w':
 // Read/Write of last dcache access
 uint32_t dcache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
-  return addr + dcacheBlocksize * strideCalculator(&dcacheStride,
-                                                   pc); // Next line prefetching
+  strideCalculator(&dcacheStride, addr);
+  if (dcacheStride.strideFlag) {
+    dcacheStride.count++;
+    return addr + dcacheStride.stride; // Next line prefetching
+  }                                    //
+  else
+    return addr + dcacheBlocksize; // Next line prefetching
   //
   // TODO: Implement a better prefetching strategy
   //
 }
 
 uint32_t l2cache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
-
-  return addr +
-         l2cacheBlocksize * strideCalculator(&dcacheStride,
-                                             pc); // Next line prefetching
-  ;                                               // Next line prefetching
-                                                  //
-    // TODO: Implement a better prefetching strategy
-    //
+  strideCalculator(&l2cacheStride, addr);
+  if (l2cacheStride.strideFlag) {
+    l2cacheStride.count++;
+    return addr + l2cacheStride.stride; // Next line prefetching
+  }                                     //
+  else
+    return addr + l2cacheBlocksize; // Next line prefetching
+                                    // else
+  // TODO: Implement a better prefetching strategy
+  //
 }
 
 // Perform a prefetch operation to I$ for the address 'addr'
@@ -342,8 +362,8 @@ void icache_prefetch(uint32_t addr) {
     if (icache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
         icache[incomCacheLine.index][i].valid == 1) {
       hitFlag = 1;
-      cacheUpdate(i, &icache[incomCacheLine.index], incomCacheLine,
-                  icacheAssoc);
+      // cacheUpdate(i, &icache[incomCacheLine.index], incomCacheLine,
+      //             icacheAssoc);
       break;
     }
   }
@@ -364,8 +384,8 @@ void dcache_prefetch(uint32_t addr) {
     if (dcache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
         dcache[incomCacheLine.index][i].valid == 1) {
       hitFlag = 1;
-      cacheUpdate(i, &dcache[incomCacheLine.index], incomCacheLine,
-                  dcacheAssoc);
+      // cacheUpdate(i, &dcache[incomCacheLine.index], incomCacheLine,
+      //             dcacheAssoc);
       break;
     }
   }
@@ -385,8 +405,8 @@ void l2cache_prefetch(uint32_t addr) {
     if (l2cache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
         l2cache[incomCacheLine.index][i].valid == 1) {
       hitFlag = 1;
-      cacheUpdate(i, &l2cache[incomCacheLine.index], incomCacheLine,
-                  l2cacheAssoc);
+      // cacheUpdate(i, &l2cache[incomCacheLine.index], incomCacheLine,
+      //             l2cacheAssoc);
       break;
     }
   }
