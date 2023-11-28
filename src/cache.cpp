@@ -92,21 +92,12 @@ vector<vector<cacheLine>> init_cacheMem(int cacheTags, int cacheSets,
   vector<vector<cacheLine>> cache(1 << cacheSets);
   vector<cacheLine> cacheSet(cacheAssoc);
 
-  vector<uint8_t> temptag(cacheTags, 0);
-  // vector<uint8_t> tempindex(cacheSets, 0);
-  vector<uint8_t> tempoffset(cacheBlocks, 0);
-  // cacheLine tempCacheLine;
-  // tempCacheLine.index = tempindex;
-  // tempCacheLine.offset = tempoffset;
-  // tempCacheLine.tag = temptag;
-  // tempCacheLine.age = 0;
-
   for (i = 0; i < 1 << cacheSets; i++) {
     cache[i] = cacheSet;
     for (j = 0; j < cacheAssoc; j++) {
-      // cache[i][j].index = tempindex;
-      cache[i][j].offset = tempoffset;
-      cache[i][j].tag = temptag;
+      cache[i][j].index = 0;
+      cache[i][j].offset = 0;
+      cache[i][j].tag = 0;
       cache[i][j].age = j;
       cache[i][j].valid = 0;
     }
@@ -187,12 +178,12 @@ uint32_t icache_access(uint32_t addr) {
   cacheLine incomCacheLine =
       AddrToCacheLine(addr, 32 - log2(icacheSets) - log2(icacheBlocksize),
                       log2(icacheSets), log2(icacheBlocksize));
-  int indexInt = BoolVect2Int(incomCacheLine.index);
   for (i = 0; i < icacheAssoc; i++) {
-    if (icache[indexInt][i].tag == incomCacheLine.tag &&
-        icache[indexInt][i].valid == 1) {
+    if (icache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
+        icache[incomCacheLine.index][i].valid == 1) {
       hitFlag = 1;
-      cacheUpdate(i, &icache[indexInt], incomCacheLine, icacheAssoc);
+      cacheUpdate(i, &icache[incomCacheLine.index], incomCacheLine,
+                  icacheAssoc);
       break;
     }
   }
@@ -200,7 +191,7 @@ uint32_t icache_access(uint32_t addr) {
     penalty += l2cache_access(addr);
     icacheMisses++;
     icachePenalties += penalty;
-    cacheUpdate(-1, &icache[indexInt], incomCacheLine, icacheAssoc);
+    cacheUpdate(-1, &icache[incomCacheLine.index], incomCacheLine, icacheAssoc);
   }
   return penalty + icacheHitTime;
 }
@@ -216,12 +207,12 @@ uint32_t dcache_access(uint32_t addr) {
   cacheLine incomCacheLine =
       AddrToCacheLine(addr, 32 - log2(dcacheSets) - log2(dcacheBlocksize),
                       log2(dcacheSets), log2(dcacheBlocksize));
-  int indexInt = BoolVect2Int(incomCacheLine.index);
   for (i = 0; i < dcacheAssoc; i++) {
-    if (dcache[indexInt][i].tag == incomCacheLine.tag &&
-        dcache[indexInt][i].valid == 1) {
+    if (dcache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
+        dcache[incomCacheLine.index][i].valid == 1) {
       hitFlag = 1;
-      cacheUpdate(i, &dcache[indexInt], incomCacheLine, dcacheAssoc);
+      cacheUpdate(i, &dcache[incomCacheLine.index], incomCacheLine,
+                  dcacheAssoc);
       break;
     }
   }
@@ -229,7 +220,7 @@ uint32_t dcache_access(uint32_t addr) {
     penalty += l2cache_access(addr);
     dcacheMisses++;
     dcachePenalties += penalty;
-    cacheUpdate(-1, &dcache[indexInt], incomCacheLine, dcacheAssoc);
+    cacheUpdate(-1, &dcache[incomCacheLine.index], incomCacheLine, dcacheAssoc);
   }
   return penalty + dcacheHitTime;
 }
@@ -245,12 +236,12 @@ uint32_t l2cache_access(uint32_t addr) {
   cacheLine incomCacheLine =
       AddrToCacheLine(addr, 32 - log2(l2cacheSets) - log2(l2cacheBlocksize),
                       log2(l2cacheSets), log2(l2cacheBlocksize));
-  int indexInt = BoolVect2Int(incomCacheLine.index);
   for (i = 0; i < l2cacheAssoc; i++) {
-    if (l2cache[indexInt][i].tag == incomCacheLine.tag &&
-        l2cache[indexInt][i].valid == 1) {
+    if (l2cache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
+        l2cache[incomCacheLine.index][i].valid == 1) {
       hitFlag = 1;
-      cacheUpdate(i, &l2cache[indexInt], incomCacheLine, l2cacheAssoc);
+      cacheUpdate(i, &l2cache[incomCacheLine.index], incomCacheLine,
+                  l2cacheAssoc);
       break;
     }
   }
@@ -259,7 +250,8 @@ uint32_t l2cache_access(uint32_t addr) {
     penalty += memspeed;
     l2cacheMisses++;
     l2cachePenalties += penalty;
-    cacheUpdate(-1, &l2cache[indexInt], incomCacheLine, l2cacheAssoc);
+    cacheUpdate(-1, &l2cache[incomCacheLine.index], incomCacheLine,
+                l2cacheAssoc);
   }
   return penalty + l2cacheHitTime;
 }
@@ -286,33 +278,75 @@ uint32_t dcache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
   //
 }
 
+uint32_t l2cache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
+  return addr + l2cacheBlocksize; // Next line prefetching
+  //
+  // TODO: Implement a better prefetching strategy
+  //
+}
+
 // Perform a prefetch operation to I$ for the address 'addr'
 void icache_prefetch(uint32_t addr) {
+  int i, hitFlag = 0;
 
   cacheLine incomCacheLine =
       AddrToCacheLine(addr, 32 - log2(icacheSets) - log2(icacheBlocksize),
                       log2(icacheSets), log2(icacheBlocksize));
-  int indexInt = BoolVect2Int(incomCacheLine.index);
-
-  cacheUpdate(-1, &icache[indexInt], incomCacheLine, icacheAssoc);
-
-  // //
-  // // TODO: Implement I$ prefetch operation
-  // //
+  for (i = 0; i < icacheAssoc; i++) {
+    if (icache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
+        icache[incomCacheLine.index][i].valid == 1) {
+      hitFlag = 1;
+      cacheUpdate(i, &icache[incomCacheLine.index], incomCacheLine,
+                  icacheAssoc);
+      break;
+    }
+  }
+  if (hitFlag == 0) {
+    cacheUpdate(-1, &icache[incomCacheLine.index], incomCacheLine, icacheAssoc);
+  }
 }
 
 // Perform a prefetch operation to D$ for the address 'addr'
 void dcache_prefetch(uint32_t addr) {
 
+  int i, hitFlag = 0;
+
   cacheLine incomCacheLine =
       AddrToCacheLine(addr, 32 - log2(dcacheSets) - log2(dcacheBlocksize),
                       log2(dcacheSets), log2(dcacheBlocksize));
-  int indexInt = BoolVect2Int(incomCacheLine.index);
+  for (i = 0; i < dcacheAssoc; i++) {
+    if (dcache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
+        dcache[incomCacheLine.index][i].valid == 1) {
+      hitFlag = 1;
+      cacheUpdate(i, &dcache[incomCacheLine.index], incomCacheLine,
+                  dcacheAssoc);
+      break;
+    }
+  }
+  if (hitFlag == 0) {
+    cacheUpdate(-1, &dcache[incomCacheLine.index], incomCacheLine, dcacheAssoc);
+  }
+}
 
-  cacheUpdate(-1, &dcache[indexInt], incomCacheLine, dcacheAssoc);
-  //
-  // TODO: Implement D$ prefetch operation
-  //
+void l2cache_prefetch(uint32_t addr) {
+
+  int i, hitFlag = 0;
+
+  cacheLine incomCacheLine =
+      AddrToCacheLine(addr, 32 - log2(l2cacheSets) - log2(l2cacheBlocksize),
+                      log2(l2cacheSets), log2(l2cacheBlocksize));
+  for (i = 0; i < l2cacheAssoc; i++) {
+    if (l2cache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
+        l2cache[incomCacheLine.index][i].valid == 1) {
+      hitFlag = 1;
+      cacheUpdate(i, &l2cache[incomCacheLine.index], incomCacheLine,
+                  l2cacheAssoc);
+      break;
+    }
+  }
+  if (hitFlag == 0) {
+    cacheUpdate(-1, &l2cache[incomCacheLine.index], incomCacheLine, l2cacheAssoc);
+  }
 }
 
 int log2(uint32_t number) {
@@ -329,34 +363,18 @@ cacheLine AddrToCacheLine(uint32_t addr, int tagSize, int indexSize,
   bool bit;
   cacheLine tempCacheLine;
 
-  vector<uint8_t> temptag(tagSize, 0);
-  vector<uint8_t> tempindex(indexSize, 0);
-  vector<uint8_t> tempoffset(blockSize, 0);
+  tempCacheLine.tag = 0;
+  tempCacheLine.index = 0;
+  tempCacheLine.offset = 0;
 
-  tempCacheLine.tag = temptag;
-  tempCacheLine.index = tempindex;
-  tempCacheLine.offset = tempoffset;
+  uint32_t offsetMask = (1 << blockSize) - 1;
+  uint32_t indexMask = ((1 << indexSize) - 1) << blockSize;
+  uint32_t tagMask = ((1 << tagSize) - 1) << (blockSize + indexSize);
 
-  for (int i = 0; i < 32; i++) {
-    bit = (addr >> i) & 1;
-    if (i < blockSize && i >= 0) {
-      tempCacheLine.offset[i] = bit;
-    } else if (i >= blockSize && i < indexSize + blockSize) {
-      tempCacheLine.index[i - blockSize] = bit;
-    } else {
-      tempCacheLine.tag[i - blockSize - indexSize] = bit;
-    }
-  }
+  tempCacheLine.tag |= (addr & tagMask) >> (blockSize + indexSize);
+  tempCacheLine.index |= (addr & indexMask) >> blockSize;
+  tempCacheLine.offset |= addr & offsetMask;
   tempCacheLine.age = 0;
+
   return tempCacheLine;
-}
-
-uint32_t BoolVect2Int(vector<uint8_t> boolVect) {
-  uint32_t intSum = 0;
-  for (int i = 0; i < boolVect.size(); i++) {
-    if (boolVect[i])
-      intSum += 1 << i;
-  }
-
-  return intSum;
 }

@@ -99,16 +99,20 @@ uint32_t icache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w);
 
 uint32_t dcache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w);
 
+uint32_t l2cache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w);
+
 void icache_prefetch(uint32_t addr);
 
 void dcache_prefetch(uint32_t addr);
 
+void l2cache_prefetch(uint32_t addr);
+
 int log2(uint32_t number);
 
 struct cacheLine {
-  std::vector<uint8_t> tag;
-  std::vector<uint8_t> index;
-  std::vector<uint8_t> offset;
+  uint32_t tag;
+  uint32_t index;
+  uint32_t offset;
   int age;
   bool valid;
 };

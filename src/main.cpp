@@ -197,6 +197,7 @@ int read_mem_access(uint32_t *pc, uint32_t *addr, char *i_or_d, char *r_or_w) {
 }
 
 int main(int argc, char *argv[]) {
+  // freopen("./trace2.txt", "r", stdin);
   // Set defaults
   set_defaults();
 
@@ -235,10 +236,12 @@ int main(int argc, char *argv[]) {
       totalPenalties += icache_access(addr);
       if (prefetch == TRUE)
         icache_prefetch(icache_prefetch_addr(pc, addr, r_or_w));
+      l2cache_prefetch(l2cache_prefetch_addr(pc, addr, r_or_w));
     } else if (i_or_d == 'D') {
       totalPenalties += dcache_access(addr);
       if (prefetch == TRUE)
         dcache_prefetch(dcache_prefetch_addr(pc, addr, r_or_w));
+      l2cache_prefetch(l2cache_prefetch_addr(pc, addr, r_or_w));
     } else {
       fprintf(stderr, "Input Error '%c' must be either 'I' or 'D'\n", i_or_d);
       exit(1);
