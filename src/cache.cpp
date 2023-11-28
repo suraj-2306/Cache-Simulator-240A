@@ -120,7 +120,7 @@ strideStruct initStrideDetector() {
 
   return tempStrideStruct;
 }
-int strideCalculator(strideStruct *tempStrideStruct, int pc) {
+int strideCalculator(strideStruct *tempStrideStruct, uint32_t pc) {
   (*tempStrideStruct).difft_2 =
       (*tempStrideStruct).pct_2 - (*tempStrideStruct).pct_3;
   (*tempStrideStruct).difft_1 =
@@ -322,10 +322,13 @@ uint32_t dcache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
 
 uint32_t l2cache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
 
-  return addr + l2cacheBlocksize; // Next line prefetching
-  //
-  // TODO: Implement a better prefetching strategy
-  //
+  return addr +
+         l2cacheBlocksize * strideCalculator(&dcacheStride,
+                                             pc); // Next line prefetching
+  ;                                               // Next line prefetching
+                                                  //
+    // TODO: Implement a better prefetching strategy
+    //
 }
 
 // Perform a prefetch operation to I$ for the address 'addr'
