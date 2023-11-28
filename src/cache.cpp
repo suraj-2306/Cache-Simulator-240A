@@ -76,6 +76,10 @@ cacheLine dcacheLine;
 vector<cacheLine> dcacheSet(dcacheAssoc);
 vector<vector<cacheLine>> dcache(dcacheSets);
 
+strideStruct icacheStride;
+strideStruct dcacheStride;
+strideStruct l2cacheStride;
+
 //
 // TODO: Add your Cache data structures here
 //
@@ -104,6 +108,37 @@ vector<vector<cacheLine>> init_cacheMem(int cacheTags, int cacheSets,
   }
   return cache;
 }
+strideStruct initStrideDetector() {
+  strideStruct tempStrideStruct;
+  tempStrideStruct.pct = 0;
+  tempStrideStruct.pct_1 = 0;
+  tempStrideStruct.pct_2 = 0;
+  tempStrideStruct.pct_3 = 0;
+  tempStrideStruct.difft = 0;
+  tempStrideStruct.difft_1 = 0;
+  tempStrideStruct.difft_2 = 0;
+
+  return tempStrideStruct;
+}
+int strideCalculator(strideStruct *tempStrideStruct, int pc) {
+  (*tempStrideStruct).difft_2 =
+      (*tempStrideStruct).pct_2 - (*tempStrideStruct).pct_3;
+  (*tempStrideStruct).difft_1 =
+      (*tempStrideStruct).pct_1 - (*tempStrideStruct).pct_2;
+  (*tempStrideStruct).difft =
+      (*tempStrideStruct).pct - (*tempStrideStruct).pct_1;
+
+  (*tempStrideStruct).pct_3 = (*tempStrideStruct).pct_2;
+  (*tempStrideStruct).pct_2 = (*tempStrideStruct).pct_1;
+  (*tempStrideStruct).pct_1 = (*tempStrideStruct).pct;
+  (*tempStrideStruct).pct = pc;
+
+  if (((*tempStrideStruct).difft_1 - (*tempStrideStruct).difft_2 == 0) &&
+      ((*tempStrideStruct).difft - (*tempStrideStruct).difft_1 == 0))
+    return (*tempStrideStruct).difft;
+  else
+    return 1;
+}
 
 void init_cache() {
   // Initialize cache stats
@@ -128,6 +163,10 @@ void init_cache() {
                     log2(l2cacheSets), log2(l2cacheBlocksize), l2cacheAssoc);
   dcache = init_cacheMem(32 - log2(dcacheSets) - log2(dcacheBlocksize),
                          log2(dcacheSets), log2(dcacheBlocksize), dcacheAssoc);
+
+  icacheStride = initStrideDetector();
+  dcacheStride = initStrideDetector();
+  l2cacheStride = initStrideDetector();
 }
 
 // Clean Up the Cache Hierarchy
@@ -261,7 +300,9 @@ uint32_t l2cache_access(uint32_t addr) {
 // icache access 'addr':   Accessed Address of last icache access 'r_or_w':
 // Read/Write of last icache access
 uint32_t icache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
-  return addr + icacheBlocksize; // Next line prefetching
+
+  return addr + icacheBlocksize * strideCalculator(&icacheStride,
+                                                   pc); // Next line prefetching
   //
   // TODO: Implement a better prefetching strategy
   //
@@ -272,13 +313,15 @@ uint32_t icache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
 // dcache access 'addr':   Accessed Address of last dcache access 'r_or_w':
 // Read/Write of last dcache access
 uint32_t dcache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
-  return addr + dcacheBlocksize; // Next line prefetching
+  return addr + dcacheBlocksize * strideCalculator(&dcacheStride,
+                                                   pc); // Next line prefetching
   //
   // TODO: Implement a better prefetching strategy
   //
 }
 
 uint32_t l2cache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
+
   return addr + l2cacheBlocksize; // Next line prefetching
   //
   // TODO: Implement a better prefetching strategy
@@ -345,7 +388,8 @@ void l2cache_prefetch(uint32_t addr) {
     }
   }
   if (hitFlag == 0) {
-    cacheUpdate(-1, &l2cache[incomCacheLine.index], incomCacheLine, l2cacheAssoc);
+    cacheUpdate(-1, &l2cache[incomCacheLine.index], incomCacheLine,
+                l2cacheAssoc);
   }
 }
 

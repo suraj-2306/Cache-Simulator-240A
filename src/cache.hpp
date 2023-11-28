@@ -117,7 +117,19 @@ struct cacheLine {
   bool valid;
 };
 
+struct strideStruct {
+  uint32_t pct_3;
+  uint32_t pct_2;
+  uint32_t pct_1;
+  uint32_t pct;
+  uint32_t difft_2;
+  uint32_t difft_1;
+  uint32_t difft;
+};
+
 cacheLine AddrToCacheLine(uint32_t addr, int tagSize, int indexSize,
                           int blockSize);
 uint32_t BoolVect2Int(std::vector<uint8_t> boolVect);
+
+strideStruct initStrideDetector();
 #endif
