@@ -93,18 +93,18 @@ vector<vector<cacheLine>> init_cacheMem(int cacheTags, int cacheSets,
   vector<cacheLine> cacheSet(cacheAssoc);
 
   vector<uint8_t> temptag(cacheTags, 0);
-  vector<uint8_t> tempindex(cacheSets, 0);
+  // vector<uint8_t> tempindex(cacheSets, 0);
   vector<uint8_t> tempoffset(cacheBlocks, 0);
-  cacheLine tempCacheLine;
-  tempCacheLine.index = tempindex;
-  tempCacheLine.offset = tempoffset;
-  tempCacheLine.tag = temptag;
-  tempCacheLine.age = 0;
+  // cacheLine tempCacheLine;
+  // tempCacheLine.index = tempindex;
+  // tempCacheLine.offset = tempoffset;
+  // tempCacheLine.tag = temptag;
+  // tempCacheLine.age = 0;
 
   for (i = 0; i < 1 << cacheSets; i++) {
     cache[i] = cacheSet;
     for (j = 0; j < cacheAssoc; j++) {
-      cache[i][j].index = tempindex;
+      // cache[i][j].index = tempindex;
       cache[i][j].offset = tempoffset;
       cache[i][j].tag = temptag;
       cache[i][j].age = j;
@@ -346,8 +346,8 @@ cacheLine AddrToCacheLine(uint32_t addr, int tagSize, int indexSize,
     } else {
       tempCacheLine.tag[i - blockSize - indexSize] = bit;
     }
-    tempCacheLine.age = 0;
   }
+  tempCacheLine.age = 0;
   return tempCacheLine;
 }
 
