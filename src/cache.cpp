@@ -8,9 +8,7 @@
 
 #include "cache.hpp"
 using namespace std;
-//
-// TODO:Student Information
-//
+
 const char *studentName = "Suraj Sathya Prakash";
 const char *studentID = "A59026390";
 const char *email = "ssathyaprakash@ucsd.edu";
@@ -80,10 +78,6 @@ strideStruct icacheStride;
 strideStruct dcacheStride;
 strideStruct l2cacheStride;
 
-//
-// TODO: Add your Cache data structures here
-//
-
 //------------------------------------//
 //          Cache Functions           //
 //------------------------------------//
@@ -119,7 +113,6 @@ strideStruct initStrideDetector() {
   tempStrideStruct.difft_2 = 0;
   tempStrideStruct.difft_3 = 0;
   tempStrideStruct.count = 0;
-  // tempStrideStruct.strideFlag = 0;
 
   return tempStrideStruct;
 }
@@ -144,8 +137,6 @@ void strideCalculator(strideStruct *tempStrideStruct, uint32_t addr) {
     tempStrideStruct->stride = (*tempStrideStruct).difft;
     tempStrideStruct->strideFlag = 1;
   }
-  // } else
-  //   tempStrideStruct->strideFlag = 0;
 }
 
 void init_cache() {
@@ -178,13 +169,8 @@ void init_cache() {
 }
 
 // Clean Up the Cache Hierarchy
-//
-void clean_cache() {
-  //
-  // free(icache);
-  // TODO: Clean Up Cache Simulator Data Structures
-  //
-}
+void clean_cache() {}
+
 void cacheUpdate(int updatestatus, vector<cacheLine> *cacheSet,
                  cacheLine incomCacheLine, int cacheAssoc) {
   int i = 0, mark = -1;
@@ -312,13 +298,9 @@ uint32_t icache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
   strideCalculator(&icacheStride, addr);
   if (icacheStride.strideFlag) {
     icacheStride.count++;
-    return addr + icacheStride.stride; // Next line prefetching
+    return addr + icacheStride.stride; // Stride prefetching
   } else
-    return addr + icacheBlocksize;
-
-  //
-  // TODO: Implement a better prefetching strategy
-  //
+    return addr + icacheBlocksize; // Next line prefetching
 }
 
 // Predict an address to prefetch on dcache with the information of last
@@ -329,26 +311,18 @@ uint32_t dcache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
   strideCalculator(&dcacheStride, addr);
   if (dcacheStride.strideFlag) {
     dcacheStride.count++;
-    return addr + dcacheStride.stride; // Next line prefetching
-  }                                    //
-  else
+    return addr + dcacheStride.stride; // Stride prefetching
+  } else
     return addr + dcacheBlocksize; // Next line prefetching
-  //
-  // TODO: Implement a better prefetching strategy
-  //
 }
 
 uint32_t l2cache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
   strideCalculator(&l2cacheStride, addr);
   if (l2cacheStride.strideFlag) {
     l2cacheStride.count++;
-    return addr + l2cacheStride.stride; // Next line prefetching
-  }                                     //
-  else
+    return addr + l2cacheStride.stride; // Stride prefetching
+  } else
     return addr + l2cacheBlocksize; // Next line prefetching
-                                    // else
-  // TODO: Implement a better prefetching strategy
-  //
 }
 
 // Perform a prefetch operation to I$ for the address 'addr'
@@ -362,8 +336,6 @@ void icache_prefetch(uint32_t addr) {
     if (icache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
         icache[incomCacheLine.index][i].valid == 1) {
       hitFlag = 1;
-      // cacheUpdate(i, &icache[incomCacheLine.index], incomCacheLine,
-      //             icacheAssoc);
       break;
     }
   }
@@ -384,8 +356,6 @@ void dcache_prefetch(uint32_t addr) {
     if (dcache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
         dcache[incomCacheLine.index][i].valid == 1) {
       hitFlag = 1;
-      // cacheUpdate(i, &dcache[incomCacheLine.index], incomCacheLine,
-      //             dcacheAssoc);
       break;
     }
   }
@@ -405,8 +375,6 @@ void l2cache_prefetch(uint32_t addr) {
     if (l2cache[incomCacheLine.index][i].tag == incomCacheLine.tag &&
         l2cache[incomCacheLine.index][i].valid == 1) {
       hitFlag = 1;
-      // cacheUpdate(i, &l2cache[incomCacheLine.index], incomCacheLine,
-      //             l2cacheAssoc);
       break;
     }
   }
