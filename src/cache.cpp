@@ -1,4 +1,3 @@
-//========================================================//
 //  cache.c                                               //
 //  Source file for the Cache Simulator                   //
 //                                                        //
@@ -77,13 +76,36 @@ vector<vector<cacheLine>> dcache(dcacheSets);
 strideStruct icacheStride;
 strideStruct dcacheStride;
 strideStruct l2cacheStride;
+vector<int32_t> icacheTagAccess;
+vector<int32_t> dcacheTagAccess;
+vector<int32_t> l2cacheTagAccess;
 
 //------------------------------------//
 //          Cache Functions           //
 //------------------------------------//
 
-// Initialize the Cache Hierarchy
-//
+bool tagLookup(int cacheType, uint32_t tag) {
+  if (cacheType == 0) {
+    auto found0 = find(icacheTagAccess.begin(), icacheTagAccess.end(), tag);
+    if (found0 != icacheTagAccess.end())
+      return 0;
+    else
+      icacheTagAccess.push_back(tag);
+  } else if (cacheType == 1) {
+    auto found1 = find(dcacheTagAccess.begin(), dcacheTagAccess.end(), tag);
+    if (found1 != dcacheTagAccess.end())
+      return 0;
+    else
+      dcacheTagAccess.push_back(tag);
+  } else {
+    auto found2 = find(l2cacheTagAccess.begin(), l2cacheTagAccess.end(), tag);
+    if (found2 != l2cacheTagAccess.end())
+      return 0;
+    else
+      l2cacheTagAccess.push_back(tag);
+  }
+  return 1;
+}
 vector<vector<cacheLine>> init_cacheMem(int cacheTags, int cacheSets,
                                         int cacheBlocks, int cacheAssoc) {
   int i, j;
@@ -183,9 +205,7 @@ void cacheUpdate(int updatestatus, vector<cacheLine> *cacheSet,
         break;
       }
     }
-
   } else {
-    // (*cacheSet)[updatestatus].tag = incomCacheLine.tag;
     mark = updatestatus;
   }
   int prevAge = (*cacheSet)[mark].age;
@@ -201,7 +221,6 @@ void cacheUpdate(int updatestatus, vector<cacheLine> *cacheSet,
 
 // Perform a memory accesswH through the icache interface for the address
 // 'addr' Return the access time for the memory operation
-//
 uint32_t icache_access(uint32_t addr) {
 
   uint32_t penalty = 0;
@@ -221,6 +240,7 @@ uint32_t icache_access(uint32_t addr) {
     }
   }
   if (hitFlag == 0) {
+    compulsory_miss += tagLookup(0, incomCacheLine.tag);
     penalty += l2cache_access(addr);
     icacheMisses++;
     icachePenalties += penalty;
@@ -250,6 +270,7 @@ uint32_t dcache_access(uint32_t addr) {
     }
   }
   if (hitFlag == 0) {
+    compulsory_miss += tagLookup(1, incomCacheLine.tag);
     penalty += l2cache_access(addr);
     dcacheMisses++;
     dcachePenalties += penalty;
@@ -280,6 +301,7 @@ uint32_t l2cache_access(uint32_t addr) {
   }
 
   if (hitFlag == 0) {
+    compulsory_miss += tagLookup(2, incomCacheLine.tag);
     penalty += memspeed;
     l2cacheMisses++;
     l2cachePenalties += penalty;
@@ -294,7 +316,6 @@ uint32_t l2cache_access(uint32_t addr) {
 // icache access 'addr':   Accessed Address of last icache access 'r_or_w':
 // Read/Write of last icache access
 uint32_t icache_prefetch_addr(uint32_t pc, uint32_t addr, char r_or_w) {
-
   strideCalculator(&icacheStride, addr);
   if (icacheStride.strideFlag) {
     icacheStride.count++;

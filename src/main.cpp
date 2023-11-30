@@ -155,7 +155,8 @@ void printCacheStats() {
     }
   }
   printf("  total compulsory misses: %10lu\n", compulsory_miss);
-  printf("  total other misses:      %10lu\n", other_miss);
+  printf("  total other misses:      %10lu\n",
+         icacheMisses + dcacheMisses + l2cacheMisses - compulsory_miss);
 }
 
 // Set the defaults for the Cache Simulator
@@ -242,7 +243,7 @@ int main(int argc, char *argv[]) {
       totalPenalties += dcache_access(addr);
       if (prefetch == TRUE)
         dcache_prefetch(dcache_prefetch_addr(pc, addr, r_or_w));
-     l2cache_prefetch(l2cache_prefetch_addr(pc, addr, r_or_w));
+      l2cache_prefetch(l2cache_prefetch_addr(pc, addr, r_or_w));
     } else {
       fprintf(stderr, "Input Error '%c' must be either 'I' or 'D'\n", i_or_d);
       exit(1);

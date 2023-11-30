@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <algorithm>
 
 struct cacheLine {
   uint32_t tag;
